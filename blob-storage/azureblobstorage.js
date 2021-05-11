@@ -14,7 +14,7 @@ module.exports = function (RED) {
         error: { color: "grey", text: "Error" },
         receiving: { color: "yellow", text: "Receiving" },
         received: { color: "green", text: "Received message" },
-        inOperation: { color: "blue", text: "In Operation" }
+        inOperation: { color: "blue", text: "Operational" }
     };
 
     var setStatus = (node, status) => {
