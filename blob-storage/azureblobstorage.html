@@ -1,5 +1,5 @@
 <script type="text/javascript">
-    RED.nodes.registerType('Save Blob',{
+    RED.nodes.registerType('Aleph Save Blob',{
         category: 'cloud',
         color: '#00abec',
         defaults: {
@@ -19,7 +19,7 @@
         }
     });
 
-    RED.nodes.registerType('Get Blob',{
+    RED.nodes.registerType('Aleph Get Blob',{
         category: 'cloud',
         color: '#00abec',
         defaults: {
@@ -40,7 +40,7 @@
     });
 </script>
 
-<script type="text/x-red" data-template-name="Save Blob">
+<script type="text/x-red" data-template-name="Aleph Save Blob">
     <div class="form-row">
         <label for="node-input-accountname"><i class="fa fa-bookmark"></i> Storage Account Name</label>
         <input type="text" id="node-input-accountname">
@@ -63,11 +63,11 @@
     </div>
 </script>
 
-<script type="text/x-red" data-help-name="Save Blob">
+<script type="text/x-red" data-help-name="Aleph Save Blob">
     <p>A simple node that that makes it easy to consume and manage Microsoft Azure Storage Services</p>
 </script>
 
-<script type="text/x-red" data-template-name="Get Blob">
+<script type="text/x-red" data-template-name="Aleph Get Blob">
     <div class="form-row">
         <label for="node-input-accountname"><i class="fa fa-bookmark"></i> Storage Account Name</label>
         <input type="text" id="node-input-accountname">
@@ -90,7 +90,7 @@
     </div>
 </script>
 
-<script type="text/x-red" data-help-name="Get Blob">
+<script type="text/x-red" data-help-name="Aleph Get Blob">
     <p>A simple node that that makes it easy to get blob from Azure Blob Storage</p>
 </script>
 

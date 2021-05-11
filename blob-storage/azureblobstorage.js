@@ -5,91 +5,94 @@ module.exports = function (RED) {
     var fs = require('fs');
     var path = require('path');
     var clientBlobService = null;
-    var clientAccountName = "";
-    var clientAccountKey = "";
-    var clientContainerName = "";
-    var clientBlobName = "";
-    var node = null;
     var nodeConfig = null;
 
     var statusEnum = {
         disconnected: { color: "red", text: "Disconnected" },
-        sending: { color: "green", text: "Sending" },
-        sent: { color: "blue", text: "Sent message" },
+        sending: { color: "yellow", text: "Sending" },
+        sent: { color: "green", text: "Sent message" },
         error: { color: "grey", text: "Error" },
         receiving: { color: "yellow", text: "Receiving" },
-        received: { color: "green", text: "Received message" }
+        received: { color: "green", text: "Received message" },
+        inOperation: { color: "blue", text: "In Operation" }
     };
 
-    var setStatus = function (status) {
+    var setStatus = (node, status) => {
         node.status({ fill: status.color, shape: "dot", text: status.text });
     };
 
-    var updateBlob = function (container, blob, file) {
-        node.log('Updating Blob');
-        // 
+    var disconnectFrom = (node) => {
+        if (clientBlobService) {
+            node.log('Disconnecting from Azure');
+            clientBlobService.removeAllListeners();
+            clientBlobService = null;
+            setStatus(node, statusEnum.disconnected);
+        }
     };
 
-    var deleteBlob = function (container, blob) {
-        node.log('deleting blob');
-        clientBlobService.deleteBlob(container, blob, function(err, result, response){
-            if (err) {
-                node.error('Error while trying to delete blob:' + err.toString());
-                setStatus(statusEnum.error);
-            } else {
-                node.log('Blob deleted');
-                setStatus(statusEnum.sent);
-                node.send('Blob deleted');
-            } 
-        });   
-    };
+    var createContainer = (node, containerName, blobservice, callback) => {
+        // Create the container
+        blobservice.createContainerIfNotExists(containerName, function (error) {
+            if (error) {
+                node.log(error);
+            }
+            else {
+                node.log("Container '" + containerName + "' ready for blob creation");
+                callback();
+            }
+        });
+    }
 
-    var disconnectFrom = function () { 
-         if (clientBlobService) { 
-             node.log('Disconnecting from Azure'); 
-             clientBlobService.removeAllListeners(); 
-             clientBlobService = null; 
-             setStatus(statusEnum.disconnected); 
-         } 
-     };
+    var uploadBlob = (node, file, blobService, containerName, blobName, callback) => {
+        blobService.createBlockBlobFromLocalFile(containerName, blobName, file, function (error) {
+            if (error) {
+                node.log(error);
+                callback(error);
+            }
 
+            callback();
+        });
+    }
 
     // Main function called by Node-RED    
     function AzureBlobStorage(config) {
-        // Store node for further use
-        node = this;
+        // Store node for further use        
         nodeConfig = config;
+        var node = this;
 
         // Create the Node-RED node
         RED.nodes.createNode(this, config);
-        clientAccountName = this.credentials.accountname;
-        clientAccountKey = this.credentials.key;
-        clientContainerName = this.credentials.container;
-        clientBlobName = this.credentials.blob;
+        let clientAccountName = this.credentials.accountname;
+        let clientAccountKey = this.credentials.key;
+        let clientContainerName = this.credentials.container;
+        let clientBlobName = this.credentials.blob;
+
         var blobService = Client.createBlobService(clientAccountName, clientAccountKey);
+        setStatus(node, statusEnum.inOperation);        
 
         this.on('input', function (msg) {
-            node.log("Uploading blob...");
-            var messageJSON = null;
-
-            clientAccountName = this.credentials.accountname;
-            clientAccountKey = this.credentials.key;
-            clientContainerName = this.credentials.container;
             if (!this.credentials.blob) {
                 var nameObject = path.parse(msg.payload);
                 clientBlobName = nameObject.base;
             }
-            
-            // Sending data to Azure Blob Storage
-            setStatus(statusEnum.sending);
-            createContainer(clientContainerName, blobService, function() {
 
-                uploadBlob(msg.payload, blobService, clientContainerName, clientBlobName, function () {
+            setStatus(node, statusEnum.sending);
+            createContainer(node, clientContainerName, blobService, function () {
+                uploadBlob(node, msg.payload, blobService, clientContainerName, clientBlobName, (error) => {
+                    if (error) {
+                        setStatus(node, statusEnum.error);
+                        return;
+                    }
 
-                    node.log("Upload completed!");
+                    let newMsg = {}
+                    newMsg.payload = clientBlobName;
+                    newMsg.containerName = clientContainerName;
+                    newMsg.status = "OK";
 
+                    node.send(newMsg);
+                    setStatus(node, statusEnum.sent);
                 });
-            }); 
+            });
         });
 
         this.on('close', function () {
@@ -97,35 +100,9 @@ module.exports = function (RED) {
         });
     }
 
-    function createContainer (containerName, blobservice, callback) {
-        // Create the container
-        blobservice.createContainerIfNotExists(containerName, function(error) {
-            if (error) {
-                node.log(error);
-            }
-            else {
-                node.log("Container '"+ containerName +"' ready for blob creation");
-                callback();
-            }
-        });
-    }
-
-    function uploadBlob(file, blobService, containerName, blobName, callback) {
-        blobService.createBlockBlobFromLocalFile(containerName, blobName, file, function (error) {
-            if (error) {
-                node.log(error);
-            }
-            else {
-                node.log("Blob '" + blobName + "' uploaded");
-                node.send("Blob '" + blobName + "' uploaded in container '" + containerName +"'");
-                callback();
-            }
-        });
-    }
-
     function AzureBlobStorageDownload(config) {
         // Store node for further use
-        node = this;
+        var node = this;
         nodeConfig = config;
 
         // Create the Node-RED node
@@ -134,16 +111,15 @@ module.exports = function (RED) {
         clientAccountKey = node.credentials.key;
         clientContainerName = node.credentials.container;
         clientBlobName = node.credentials.blob;
+
         var blobservice = Client.createBlobService(clientAccountName, clientAccountKey);
+        setStatus(node, statusEnum.inOperation);
         var destinationFile;
 
         this.on('input', function (msg) {
-            node.log('Downloading blob...');
-            // Sending order to Azure Blob Storage
-            //createContainer(clientContainerName);
-            setStatus(statusEnum.receiving);
+            setStatus(node, statusEnum.receiving);
 
-            node.log("msg.payload" + msg.payload);
+            node.log("msg.payload " + msg.payload);
             if (msg.payload) {
                 destinationFile = msg.payload;
             }
@@ -151,12 +127,25 @@ module.exports = function (RED) {
                 const fileName = clientBlobName.replace('.txt', '.downloaded.txt');
                 destinationFile = path.join(__dirname, fileName);
             }
-            
-            node.log("destinationFile" + destinationFile);
-            downloadBlob(blobservice, clientContainerName, clientBlobName, destinationFile, function() {
+
+            node.log("destinationFile " + destinationFile);
+            downloadBlob(node, blobservice, clientContainerName, clientBlobName, destinationFile, (error) => {
+
+                if (error) {
+                    setStatus(node, statusEnum.error);
+                    return;
+                }
+
                 node.log("Download completed!");
-            });   
-            setStatus(statusEnum.received);
+                let newMsg = {};
+                //newMsg.payload = path.dirname(destinationFile);
+                newMsg.payload = destinationFile;
+                newMsg.blobName = clientBlobName;
+                newMsg.status = "OK";
+
+                node.send(newMsg);
+                setStatus(node, statusEnum.received);
+            });
         });
 
         this.on('close', function () {
@@ -164,21 +153,22 @@ module.exports = function (RED) {
         });
     }
 
-    function downloadBlob(blobservice, containerName, blobName, fileName, callback) {
+    function downloadBlob(node, blobservice, containerName, blobName, fileName, callback) {
+        node.log(containerName);
+        node.log(blobName);
+        node.log(fileName);
         blobservice.getBlobToLocalFile(containerName, blobName, fileName, function (error2) {
             if (error2) {
                 node.log(error2);
+                callback(error2);
             }
-            else {
-                node.log("Blob '"+ blobName + "' is downloaded successfully!");
-                node.send("Blob '" + blobName + "' is downloaded successfully at '" + path.dirname(fileName) +"'");
-                callback();
-            }
+
+            callback();
         });
     }
 
     // Registration of the node into Node-RED
-    RED.nodes.registerType("Save Blob", AzureBlobStorage, {
+    RED.nodes.registerType("Aleph Save Blob", AzureBlobStorage, {
         credentials: {
             accountname: { type: "text" },
             key: { type: "text" },
@@ -191,7 +181,7 @@ module.exports = function (RED) {
     });
 
     // Registration of the node into Node-RED to download
-    RED.nodes.registerType("Get Blob", AzureBlobStorageDownload, {
+    RED.nodes.registerType("Aleph Get Blob", AzureBlobStorageDownload, {
         credentials: {
             accountname: { type: "text" },
             key: { type: "text" },
