@@ -14,11 +14,15 @@ module.exports = function (RED) {
         error: { color: "grey", text: "Error" },
         receiving: { color: "yellow", text: "Receiving" },
         received: { color: "green", text: "Received message" },
-        inOperation: { color: "blue", text: "Operational" }
+        operational: { color: "blue", text: "Operational" }
     };
 
     var setStatus = (node, status) => {
         node.status({ fill: status.color, shape: "dot", text: status.text });
+    };
+
+    var setErrorStatus = (node, status, message) => {
+        node.status({ fill: status.color, shape: "dot", text: message });
     };
 
     var disconnectFrom = (node) => {
@@ -35,11 +39,11 @@ module.exports = function (RED) {
         blobservice.createContainerIfNotExists(containerName, function (error) {
             if (error) {
                 node.log(error);
+                setStatus(node, statusEnum.error);
+                return;
             }
-            else {
-                node.log("Container '" + containerName + "' ready for blob creation");
-                callback();
-            }
+            
+            callback();
         });
     }
 
@@ -47,9 +51,11 @@ module.exports = function (RED) {
         blobService.createBlockBlobFromLocalFile(containerName, blobName, file, function (error) {
             if (error) {
                 node.log(error);
+                setErrorStatus(node, statusEnum.error, file);
                 callback(error);
             }
 
+            node.log("Blob "+ blobName + " uploaded to " + containerName + " container");
             callback();
         });
     }
@@ -65,15 +71,19 @@ module.exports = function (RED) {
         let clientAccountName = this.credentials.accountname;
         let clientAccountKey = this.credentials.key;
         let clientContainerName = this.credentials.container;
-        let clientBlobName = this.credentials.blob;
 
         var blobService = Client.createBlobService(clientAccountName, clientAccountKey);
-        setStatus(node, statusEnum.inOperation);        
+        setStatus(node, statusEnum.operational);
 
         this.on('input', function (msg) {
+            let clientBlobName;
+
             if (!this.credentials.blob) {
                 var nameObject = path.parse(msg.payload);
                 clientBlobName = nameObject.base;
+            }
+            else {
+                clientBlobName = this.credentials.blob;
             }
 
             setStatus(node, statusEnum.sending);
@@ -107,19 +117,18 @@ module.exports = function (RED) {
 
         // Create the Node-RED node
         RED.nodes.createNode(this, config);
-        clientAccountName = node.credentials.accountname;
-        clientAccountKey = node.credentials.key;
-        clientContainerName = node.credentials.container;
-        clientBlobName = node.credentials.blob;
+        let clientAccountName = this.credentials.accountname;
+        let clientAccountKey = this.credentials.key;
+        let clientContainerName = this.credentials.container;
+        let clientBlobName = node.credentials.blob;        
 
         var blobservice = Client.createBlobService(clientAccountName, clientAccountKey);
-        setStatus(node, statusEnum.inOperation);
+        setStatus(node, statusEnum.operational);
         var destinationFile;
 
         this.on('input', function (msg) {
             setStatus(node, statusEnum.receiving);
 
-            node.log("msg.payload " + msg.payload);
             if (msg.payload) {
                 destinationFile = msg.payload;
             }
@@ -128,17 +137,13 @@ module.exports = function (RED) {
                 destinationFile = path.join(__dirname, fileName);
             }
 
-            node.log("destinationFile " + destinationFile);
             downloadBlob(node, blobservice, clientContainerName, clientBlobName, destinationFile, (error) => {
-
                 if (error) {
                     setStatus(node, statusEnum.error);
                     return;
                 }
-
-                node.log("Download completed!");
+                
                 let newMsg = {};
-                //newMsg.payload = path.dirname(destinationFile);
                 newMsg.payload = destinationFile;
                 newMsg.blobName = clientBlobName;
                 newMsg.status = "OK";
@@ -153,16 +158,15 @@ module.exports = function (RED) {
         });
     }
 
-    function downloadBlob(node, blobservice, containerName, blobName, fileName, callback) {
-        node.log(containerName);
-        node.log(blobName);
-        node.log(fileName);
+    function downloadBlob(node, blobservice, containerName, blobName, fileName, callback) {        
         blobservice.getBlobToLocalFile(containerName, blobName, fileName, function (error2) {
             if (error2) {
                 node.log(error2);
+                setErrorStatus(node, statusEnum.error, fileName);
                 callback(error2);
             }
 
+            node.log("Blob "+ blobName + " downloaded");
             callback();
         });
     }
