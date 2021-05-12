@@ -1,22 +1,21 @@
-# node-red-contrib-azure
+# node-red-contrib-azure-aleph
+
+from non-active repo [node-red-contrib-azure](https://github.com/Azure/node-red-contrib-azure)
 
 node-red-contrib-azure is an open source repo with a collection of <a href="http://nodered.org" target="_new">Node-RED</a> nodes that allows you to work with the different Azure services and offerrings.
 
- **This is sample code only and should not be used in production.
-This repo is NOT actively being worked on!**
+### Active development node in this repo:
 
-<a href="https://github.com/Azure/node-red-contrib-azure/tree/master/blob-storage">blob-storage</a> - Azure Blob Storage
+<a href="https://github.com/javis86/node-red-contrib-azure/tree/master/blob-storage">blob-storage</a> - Azure Blob Storage
 
-<a href="https://github.com/Azure/node-red-contrib-azure/tree/master/documentdb">documentdb</a> Azure CosmosDB (formerly DocumentDB)
 
-<a href="https://github.com/Azure/node-red-contrib-azure/tree/master/event-hub">event-hub</a> Azure Event Hub
+### Non-active
+<a href="https://github.com/javis86/node-red-contrib-azure/tree/master/documentdb">documentdb</a> Azure CosmosDB (formerly DocumentDB)
+<a href="https://github.com/javis86/node-red-contrib-azure/tree/master/event-hub">event-hub</a> Azure Event Hub
+<a href="https://github.com/javis86/node-red-contrib-azure/tree/master/iot-hub">iot-hub</a> Azure IoT Hub
+<a href="https://github.com/javis86/node-red-contrib-azure/tree/master/sql">sql</a> Azure SQL
+<a href="https://github.com/javis86/node-red-contrib-azure/tree/master/table-storage">table-storage</a> Azure Table Storage
 
-<a href="https://github.com/Azure/node-red-contrib-azure/tree/master/iot-hub">iot-hub</a> Azure IoT Hub
-
-<a href="https://github.com/Azure/node-red-contrib-azure/tree/master/sql">sql</a> Azure SQL
-
-<a href="https://github.com/Azure/node-red-contrib-azure/tree/master/table-storage">table-storage</a> Azure Table Storage
- 
 # Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a
