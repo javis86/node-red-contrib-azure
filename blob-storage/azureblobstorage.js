@@ -55,7 +55,7 @@ module.exports = function (RED) {
                 callback(error);
             }
 
-            node.log("Blob "+ blobName + " uploaded to " + containerName + " container");
+            node.log("Blob "+ blobName + " uploaded to " + containerName + " container");            
             callback();
         });
     }
