@@ -4,9 +4,11 @@ from non-active repo [node-red-contrib-azure](https://github.com/Azure/node-red-
 
 node-red-contrib-azure is an open source repo with a collection of <a href="http://nodered.org" target="_new">Node-RED</a> nodes that allows you to work with the different Azure services and offerrings.
 
-### Active development node in this repo:
+This repo is only for reference to the original, please visit active github projects described below:
 
-<a href="https://github.com/javis86/node-red-contrib-azure/tree/master/blob-storage">blob-storage</a> - Azure Blob Storage
+### Active development node outside this repo:
+
+<a href="https://github.com/javis86/node-red-contrib-azure-blob-storage-aleph">blob-storage</a> - Azure Blob Storage for Aleph
 
 
 ### Non-active
